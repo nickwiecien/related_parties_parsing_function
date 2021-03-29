@@ -9,9 +9,12 @@ from azure.storage.blob import BlobServiceClient
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
 
-    # blob_name = req.params.get('name')
-
+    
+    #Parse body of request
     body = req.get_body()
+    
+    #Get 'name' attribute from json body
+    #Note: name = container/filename
     blob_name = json.loads(body)['name']
 
     client = BlobServiceClient(os.environ.get('STORAGE_ACCOUNT_URL'), os.environ.get('STORAGE_ACCOUNT_KEY'))
@@ -29,13 +32,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     with open(temp_path, 'wb') as file:
         file.write(blob_data.readall())
 
+    #Read data from sheet named 'YearRange' in the uploaded excel file
     df = pd.read_excel(temp_path, sheet_name='YearRange')
 
+    #Grab min_year and max_year from first row of data
     min_year = df.iloc[0]['min_year']
     max_year = df.iloc[0]['max_year']
 
+    #Format JSON object to be returned with min/max years
     return_obj = {'min_year': int(min_year), 'max_year': int(max_year)}
 
+    #Remove Excel file temporarily download to temp storage
     os.remove(temp_path)
 
+    #Return result
     return func.HttpResponse(json.dumps(return_obj), status_code=200)
